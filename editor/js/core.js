@@ -29,7 +29,14 @@ function fmt(t, ms = true) {
   return String(m).padStart(2, '0') + ':' + (ms ? s.toFixed(2).padStart(5, '0') : String(Math.floor(s)).padStart(2, '0'));
 }
 const byId = (arr, id) => arr.find(x => x.id === id);
-function download(blob, name) {
+const IN_ARTIFACT = !!(window.claude && window.claude.use); // visor de claude.ai: sin micrófono, sin red libre, descargas vía capacidad
+async function download(blob, name) {
+  if (IN_ARTIFACT) {
+    try {
+      const d = await window.claude.use('downloads');
+      if (d) { await d.save({ filename: name.replace(/\.srt$/, '.txt'), data: blob }); return; }
+    } catch (e) { if (e && e.code === 'declined') return; console.warn('downloads', e); }
+  }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 8000);
 }
@@ -114,7 +121,7 @@ function rt(it) {
     const m = byId(S.media, it.mediaId); r = {};
     if (it.type === 'media') {
       if (m.type === 'image') { r.el = new Image(); r.el.src = m.url; }
-      else { r.el = document.createElement('video'); r.el.src = m.url; r.el.preload = 'auto'; r.el.playsInline = true; }
+      else { r.el = document.createElement('video'); r.el.src = m.url; r.el.preload = 'auto'; r.el.playsInline = true; r.el.setAttribute('webkit-playsinline', ''); }
     } else { r.el = new Audio(m.url); r.el.preload = 'auto'; }
     RT.set(it.id, r);
     if (typeof hookAudio === 'function' && A.ctx) hookAudio(r);

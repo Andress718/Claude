@@ -2,7 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Editor de Video</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Lobster&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Poppins:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -10,6 +12,7 @@
 </head>
 <body>
 <header id="topbar">
+  <button id="btn-lib" class="only-small" title="Biblioteca">☰ Biblioteca</button>
   <div class="brand">🎬 <b>Editor de Video</b></div>
   <label class="field-inline">Formato
     <select id="aspect"></select>
@@ -19,6 +22,7 @@
   </label>
   <label class="field-inline">Fondo <input type="color" id="bg" value="#000000"></label>
   <div class="spacer"></div>
+  <button id="btn-insp" class="only-small" title="Ajustes del elemento">⚙ Ajustes</button>
   <button id="btn-undo" title="Deshacer (Ctrl+Z)">↶</button>
   <button id="btn-redo" title="Rehacer (Ctrl+Shift+Z)">↷</button>
   <button id="btn-export" class="primary">⬇ Exportar MP4</button>
@@ -40,7 +44,9 @@
       <button id="btn-play" class="primary" title="Reproducir (Espacio)">▶</button>
       <span id="timecode">00:00.00 / 00:00.00</span>
       <div class="spacer"></div>
-      <span class="hint">Arrastra sobre la vista previa para mover · rueda del ratón = escala</span>
+      <span class="hint">Arrastra para mover · pellizca (o rueda) para escalar</span>
+      <button id="btn-dup" title="Duplicar (Ctrl+D)">⧉</button>
+      <button id="btn-del" title="Eliminar (Supr)">🗑</button>
       <button id="btn-split" title="Dividir en el cursor (S)">✂ Dividir</button>
     </div>
   </section>
@@ -75,6 +81,8 @@
     <button id="tr-cancel" class="danger">Cancelar</button>
   </div>
 </div>
+
+<div id="backdrop"></div>
 
 <div id="overlay" hidden>
   <div class="modal">

@@ -102,7 +102,10 @@ $('#ov-cancel').onclick = () => { recCancel = true; pause(); if (rec && rec.stat
 /* ---------- Arranque ---------- */
 bindUI(); buildLibrary(); setAspect('16:9', 720);
 FONTS.slice(0, 10).forEach(f => ensureFont(f, true));
-document.addEventListener('pointerdown', () => ensureAudio(), { once: true });
+function unlockMedia() { // iOS solo permite play() tras un gesto: se "activan" todos los elementos
+  RT.forEach(r => { if (r.el instanceof HTMLMediaElement && !r.unlocked) { r.unlocked = true; const m = r.el.muted; r.el.muted = true; r.el.play().then(() => { r.el.pause(); r.el.muted = m; }).catch(() => { r.el.muted = m; }); } });
+}
+document.addEventListener('pointerdown', () => { ensureAudio(); unlockMedia(); });
 $('#inspector').addEventListener('focusin', () => pushUndo());
 changed(true); requestAnimationFrame(frame);
-window.__ed = { S, RT, importFiles, addText, addShape, addFx, addAudioItem, splitItem, play, pause, seek, startExport, changed, extractAudio, applyLook, toggleRecord, usePreset, TEXT_PRESETS, SUB_PRESETS, setAspect, addOverlay, undo };
+window.__ed = { FILTER_OK, S, RT, importFiles, addText, addShape, addFx, addAudioItem, splitItem, play, pause, seek, startExport, changed, extractAudio, applyLook, toggleRecord, usePreset, TEXT_PRESETS, SUB_PRESETS, setAspect, addOverlay, undo };

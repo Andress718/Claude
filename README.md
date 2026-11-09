@@ -27,3 +27,7 @@ Editor gráfico multipista que corre 100 % en el navegador. Sin instalar nada.
 
 ## Atajos
 Espacio reproducir · S dividir · Supr eliminar · Ctrl+D duplicar · Ctrl+Z / Ctrl+Shift+Z deshacer/rehacer · rueda sobre la vista previa = escala.
+
+## iPad
+Funciona con pantalla táctil: arrastra elementos, pellizca para escalar, paneles ☰ Biblioteca y ⚙ Ajustes. En Safari (que no soporta `ctx.filter`) los filtros se emulan por píxeles.
+La versión publicada como página en claude.ai no tiene micrófono ni transcripción (el visor los bloquea); para eso aloja la carpeta `editor/` en tu propio servidor con https (p. ej. GitHub Pages).

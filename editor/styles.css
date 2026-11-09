@@ -1,4 +1,5 @@
 :root{
+  color-scheme:dark;
   --bg:#14161a; --panel:#1c1f25; --panel2:#242830; --line:#2e333c; --text:#e8eaee; --muted:#8d95a3;
   --accent:#5b8cff; --accent2:#3a64d8; --danger:#e5484d;
 }
@@ -110,3 +111,36 @@ input[type=color]{width:100%;height:30px;padding:2px;background:var(--bg);border
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;width:380px;text-align:center}
 .modal progress{width:100%;height:14px;margin:8px 0 14px}
 [hidden]{display:none!important}
+
+/* ---------- Táctil / iPad ---------- */
+html,body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+body{-webkit-user-select:none;user-select:none;touch-action:manipulation}
+input,textarea,select{-webkit-user-select:text;user-select:text}
+#screen,.block,.h,#ruler{touch-action:none}
+.only-small{display:none}
+#backdrop{display:none}
+#topbar{overflow-x:auto;white-space:nowrap;scrollbar-width:none;padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+#topbar::-webkit-scrollbar{display:none}
+#topbar>*{flex:none}
+@media (max-width:1280px){
+  .only-small{display:inline-block}
+  .field-inline{font-size:0}.field-inline select{font-size:13px}
+  #workspace{grid-template-columns:minmax(0,1fr)}
+  #library,#inspector{position:fixed;top:48px;bottom:0;width:min(340px,88vw);z-index:30;box-shadow:0 0 40px #000c;transition:transform .2s;border:0}
+  #library{left:0;transform:translateX(-105%)}
+  #inspector{right:0;transform:translateX(105%)}
+  body.show-lib #library,body.show-insp #inspector{transform:none}
+  body.show-lib #backdrop,body.show-insp #backdrop{display:block;position:fixed;inset:48px 0 0 0;background:#0006;z-index:25}
+  #transport .hint{display:none}
+}
+@media (pointer:coarse){
+  button{padding:10px 14px;min-height:40px}
+  .grid button{min-height:52px}
+  input,select,textarea{font-size:16px}
+  select,input[type=number]{min-height:40px}
+  input[type=range]{height:30px}
+  .block .h{width:20px}
+  #tl-tools button{padding:6px 10px}
+  #timeline{grid-template-rows:42px minmax(0,1fr)}
+  .bin-item button{padding:8px 10px;font-size:12px}
+}

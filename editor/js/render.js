@@ -6,8 +6,37 @@ const canvas = $('#screen'), ctx = canvas.getContext('2d');
 let ic, icx, fxc, fxx, fx2, fx2x, grainC, grainKey = -1;
 const BOX = new Map(), HITS = [];
 function mkSurf(rf) { const c = document.createElement('canvas'); c.width = S.W; c.height = S.H; return [c, c.getContext('2d', rf ? { willReadFrequently: true } : {})]; }
-function resizeSurfaces() { [ic, icx] = mkSurf(true); [fxc, fxx] = mkSurf(false); [fx2, fx2x] = mkSurf(false); }
+function resizeSurfaces() { [ic, icx] = mkSurf(true); [fxc, fxx] = mkSurf(false); [fx2, fx2x] = mkSurf(false); [mc, mcx] = mkSurf(false); }
+let mc, mcx;
 resizeSurfaces();
+/* Safari/iPad no soporta ctx.filter: se emula con operaciones de píxeles */
+const FILTER_OK = !window.__noFilter && (() => { try { const c = document.createElement('canvas').getContext('2d'); c.filter = 'blur(2px)'; return c.filter === 'blur(2px)'; } catch (e) { return false; } })();
+const tmpC = document.createElement('canvas'), tmpX = tmpC.getContext('2d');
+function blurCanvas(c, px) { // desenfoque aproximado: reducir y ampliar (2 pasadas)
+  if (px < .5) return; const cv = c.canvas, W = cv.width, H = cv.height, f = Math.max(2, Math.round(px / 1.3));
+  tmpC.width = Math.max(1, Math.round(W / f)); tmpC.height = Math.max(1, Math.round(H / f)); tmpX.imageSmoothingQuality = 'high';
+  tmpX.clearRect(0, 0, tmpC.width, tmpC.height); tmpX.drawImage(cv, 0, 0, tmpC.width, tmpC.height);
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'copy'; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(tmpC, 0, 0, tmpC.width, tmpC.height, 0, 0, W, H); c.restore();
+}
+function cssPixels(c, sp) { // brillo, contraste, saturación, tono, gris, sepia, invertir
+  const q = sp.q; if (!q) return; const W = c.canvas.width, H = c.canvas.height, img = c.getImageData(0, 0, W, H), d = img.data;
+  const hr = q.hu * Math.PI / 180, cs = Math.cos(hr), sn = Math.sin(hr), sa = q.sa;
+  const h = [.213 + cs * .787 - sn * .213, .715 - cs * .715 - sn * .715, .072 - cs * .072 + sn * .928, .213 - cs * .213 + sn * .143, .715 + cs * .285 + sn * .140, .072 - cs * .072 - sn * .283, .213 - cs * .213 - sn * .787, .715 - cs * .715 + sn * .715, .072 + cs * .928 + sn * .072];
+  const g = q.gr, se = q.se, iv = q.inv;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    let r = d[i] / 255 * q.br, gg = d[i + 1] / 255 * q.br, b = d[i + 2] / 255 * q.br;
+    if (q.co !== 1) { r = q.co * (r - .5) + .5; gg = q.co * (gg - .5) + .5; b = q.co * (b - .5) + .5; }
+    if (sa !== 1) { const l = .2126 * r + .7152 * gg + .0722 * b; r = l + (r - l) * sa; gg = l + (gg - l) * sa; b = l + (b - l) * sa; }
+    if (q.hu) { const r2 = h[0] * r + h[1] * gg + h[2] * b, g2 = h[3] * r + h[4] * gg + h[5] * b; b = h[6] * r + h[7] * gg + h[8] * b; r = r2; gg = g2; }
+    if (g) { const l = .2126 * r + .7152 * gg + .0722 * b; r += (l - r) * g; gg += (l - gg) * g; b += (l - b) * g; }
+    if (se) { const r2 = r * (1 - se * .607) + gg * se * .769 + b * se * .189, g2 = r * se * .349 + gg * (1 - se * .314) + b * se * .168; b = r * se * .272 + gg * se * .534 + b * (1 - se * .869); r = r2; gg = g2; }
+    if (iv) { r = iv * (1 - r) + (1 - iv) * r; gg = iv * (1 - gg) + (1 - iv) * gg; b = iv * (1 - b) + (1 - iv) * b; }
+    d[i] = r * 255; d[i + 1] = gg * 255; d[i + 2] = b * 255;
+  }
+  c.putImageData(img, 0, 0);
+}
 
 /* ---------- Opciones de animación (compartidas con la UI) ---------- */
 const ANIM_IN = [['none', 'Ninguna'], ['fade', 'Fundido'], ['zoomIn', 'Zoom in (crece)'], ['zoomOut', 'Zoom out (encoge)'], ['pop', 'Pop con rebote'],
@@ -112,7 +141,8 @@ function colorSpec(col, extraBlur = 0) {
   if (sa !== 1) css += `saturate(${sa.toFixed(3)}) `; if (hu) css += `hue-rotate(${hu}deg) `;
   if (gr) css += `grayscale(${gr.toFixed(3)}) `; if (se) css += `sepia(${se.toFixed(3)}) `; if (inv) css += `invert(${inv.toFixed(3)}) `;
   const bl = col.bl + extraBlur; if (bl > 0) css += `blur(${bl.toFixed(1)}px)`;
-  return { css: css.trim() || 'none', grade: (temp || tint || sh || hl || ts || th) ? { temp, tint, sh, hl, ts, th } : null, vig };
+  const neutral = br === 1 && co === 1 && sa === 1 && !hu && !gr && !se && !inv;
+  return { css: css.trim() || 'none', bl, q: neutral ? null : { br, co, sa, hu, gr, se, inv }, grade: (temp || tint || sh || hl || ts || th) ? { temp, tint, sh, hl, ts, th } : null, vig };
 }
 function gradePixels(c, g) {
   const img = c.getImageData(0, 0, S.W, S.H), d = img.data;
@@ -157,10 +187,15 @@ function srcDims(it) {
 function applyMask(c, it, t, w, h) {
   const m = it.mask, lt = t - it.start; let k = 1, rot = m.rot;
   if (m.anim === 'grow') k = ease(clamp(lt / m.animDur, 0, 1)); else if (m.anim === 'pulse') k = 1 + .12 * Math.sin(lt * 6); else if (m.anim === 'spin') rot += lt * 90;
-  c.save(); c.globalCompositeOperation = m.invert ? 'destination-out' : 'destination-in';
-  c.filter = m.feather > 0 ? `blur(${m.feather}px)` : 'none'; c.fillStyle = '#000';
-  c.translate((m.x - 50) / 100 * w, (m.y - 50) / 100 * h); c.rotate(rot * Math.PI / 180);
-  shapePath(c, m.type, m.w / 100 * w * k, m.h / 100 * h * k, m.round); c.fill(); c.restore();
+  c.save(); c.translate((m.x - 50) / 100 * w, (m.y - 50) / 100 * h); c.rotate(rot * Math.PI / 180);
+  if (FILTER_OK || m.feather <= 0) {
+    c.globalCompositeOperation = m.invert ? 'destination-out' : 'destination-in'; c.filter = m.feather > 0 ? `blur(${m.feather}px)` : 'none'; c.fillStyle = '#000';
+    shapePath(c, m.type, m.w / 100 * w * k, m.h / 100 * h * k, m.round); c.fill(); c.restore();
+  } else { // sin filtro: máscara en lienzo aparte, difuminada
+    const M = c.getTransform(); mcx.setTransform(1, 0, 0, 1, 0, 0); mcx.clearRect(0, 0, S.W, S.H); mcx.setTransform(M); mcx.fillStyle = '#000';
+    shapePath(mcx, m.type, m.w / 100 * w * k, m.h / 100 * h * k, m.round); mcx.fill(); mcx.setTransform(1, 0, 0, 1, 0, 0);
+    blurCanvas(mcx, m.feather * Math.hypot(M.a, M.b)); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = m.invert ? 'destination-out' : 'destination-in'; c.drawImage(mc, 0, 0); c.restore();
+  }
 }
 function paintMedia(c, it, t, o, A, alpha, withMask, spec) {
   const d = srcDims(it); if (!d) return false;
@@ -169,11 +204,14 @@ function paintMedia(c, it, t, o, A, alpha, withMask, spec) {
   const sc = it.scale / 100 * A.s * o.scale, cx = W * it.x / 100 + o.dx + A.dx * W * .6, cy = H * it.y / 100 + o.dy + A.dy * H * .6;
   c.save(); c.globalAlpha = alpha;
   if (it.bgBlur && it.fit === 'contain' && isMain(it)) {
-    const sb = Math.max(W / iw, H / ih) * 1.1; c.save(); c.filter = 'blur(28px) brightness(.65)';
-    c.drawImage(el, W / 2 - iw * sb / 2, H / 2 - ih * sb / 2, iw * sb, ih * sb); c.restore();
+    const sb = Math.max(W / iw, H / ih) * 1.1; c.save();
+    if (FILTER_OK) { c.filter = 'blur(28px) brightness(.65)'; c.drawImage(el, W / 2 - iw * sb / 2, H / 2 - ih * sb / 2, iw * sb, ih * sb); }
+    else { const sw = Math.max(2, W >> 5), sh = Math.max(2, H >> 5); tmpC.width = sw; tmpC.height = sh; tmpX.imageSmoothingQuality = 'high'; tmpX.drawImage(el, (sw - iw * sb / W * sw) / 2, (sh - ih * sb / H * sh) / 2, iw * sb / W * sw, ih * sb / H * sh);
+      c.imageSmoothingQuality = 'high'; c.drawImage(tmpC, 0, 0, W, H); c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, W, H); }
+    c.restore();
   }
   c.translate(cx, cy); c.rotate((it.rot + A.r) * Math.PI / 180); c.scale(sc * (it.flipH ? -1 : 1) * A.sx, sc);
-  c.filter = A.bl ? colorSpec(it.color, A.bl).css : spec.css;
+  if (FILTER_OK) c.filter = spec.css;
   c.drawImage(el, -w / 2, -h / 2, w, h);
   if (withMask && it.mask.type !== 'none') { c.filter = 'none'; applyMask(c, it, t, w, h); }
   c.restore();
@@ -184,14 +222,15 @@ function paintMedia(c, it, t, o, A, alpha, withMask, spec) {
 }
 const ID_OPTS = Object.freeze({ dx: 0, dy: 0, alpha: 1, scale: 1, clip: null });
 function drawMedia(it, t, o) {
-  const A = itemAnim(it, t), spec = colorSpec(it.color, 0), alpha = it.opacity / 100 * A.a * o.alpha;
+  const A = itemAnim(it, t), spec = colorSpec(it.color, A.bl), alpha = it.opacity / 100 * A.a * o.alpha;
   if (alpha <= 0.002) return;
-  const off = it.mask.type !== 'none' || it.chroma.on || spec.grade || spec.vig > 0;
+  const off = it.mask.type !== 'none' || it.chroma.on || spec.grade || spec.vig > 0 || (!FILTER_OK && (spec.q || spec.bl > 0));
   ctx.save(); if (o.clip) o.clip(ctx); ctx.globalCompositeOperation = it.blend;
   if (!off) paintMedia(ctx, it, t, o, A, alpha, false, spec);
   else {
     icx.setTransform(1, 0, 0, 1, 0, 0); icx.globalCompositeOperation = 'source-over'; icx.globalAlpha = 1; icx.filter = 'none'; icx.clearRect(0, 0, S.W, S.H);
     if (paintMedia(icx, it, t, o, A, 1, true, spec)) {
+      if (!FILTER_OK) { if (spec.q) cssPixels(icx, spec); if (spec.bl > 0) blurCanvas(icx, spec.bl); }
       if (it.chroma.on) chromaKey(icx, it.chroma);
       if (spec.grade) gradePixels(icx, spec.grade);
       if (spec.vig > 0) vignette(icx, spec.vig, 'source-atop');
@@ -207,7 +246,7 @@ function drawShape(it, t) {
   const w = it.w / 100 * m, h = it.h / 100 * m, sc = it.scale / 100 * A.s;
   const cx = W * it.x / 100 + A.dx * W * .6, cy = H * it.y / 100 + A.dy * H * .6;
   ctx.save(); ctx.globalAlpha = alpha; ctx.globalCompositeOperation = it.blend;
-  if (A.bl) ctx.filter = `blur(${A.bl}px)`;
+  if (A.bl && FILTER_OK) ctx.filter = `blur(${A.bl}px)`;
   ctx.translate(cx, cy); ctx.rotate((it.rot + A.r) * Math.PI / 180); ctx.scale(sc * A.sx, sc);
   if (it.shadow) { ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; }
   shapePath(ctx, it.kind, w, h, it.radius); ctx.fillStyle = it.fill; ctx.fill();
@@ -242,9 +281,11 @@ function drawMain(act, t) {
 
 /* ---------- Efectos de video (capa de efectos) ---------- */
 function snapFrame() { fxx.setTransform(1, 0, 0, 1, 0, 0); fxx.clearRect(0, 0, S.W, S.H); fxx.drawImage(canvas, 0, 0); }
-function fxTransform({ s = 1, dx = 0, dy = 0, rot = 0, filter = 'none' }) {
-  snapFrame(); ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S.W, S.H); ctx.filter = filter;
+function fxTransform({ s = 1, dx = 0, dy = 0, rot = 0, blur = 0, spec = null }) {
+  snapFrame(); ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S.W, S.H);
+  if (FILTER_OK) ctx.filter = spec ? spec.css : blur ? `blur(${blur}px)` : 'none';
   ctx.translate(S.W / 2 + dx, S.H / 2 + dy); ctx.rotate(rot); ctx.scale(s, s); ctx.drawImage(fxc, -S.W / 2, -S.H / 2); ctx.restore();
+  if (!FILTER_OK) { if (blur) blurCanvas(ctx, blur); if (spec && spec.q) cssPixels(ctx, spec); if (spec && spec.bl > 0) blurCanvas(ctx, spec.bl); }
 }
 function rgbSplit(off, oy = 0) {
   snapFrame(); ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S.W, S.H); ctx.globalCompositeOperation = 'lighter';
@@ -262,9 +303,9 @@ function applyFx(fx, t) {
     case 'zoomOut': fxTransform({ s: 1 + .7 * a * (1 - ease(p)) }); break;
     case 'punch': fxTransform({ s: 1 + .5 * a * (1 - easeOut(p)) }); break;
     case 'pulse': fxTransform({ s: 1 + .12 * a * Math.abs(Math.sin(lt * Math.PI * 2)) }); break;
-    case 'blur': fxTransform({ s: 1.04, filter: `blur(${24 * a * scl}px)` }); break;
-    case 'blurIn': fxTransform({ s: 1.04, filter: `blur(${24 * a * scl * (1 - ease(p))}px)` }); break;
-    case 'blurOut': fxTransform({ s: 1.04, filter: `blur(${24 * a * scl * ease(p)}px)` }); break;
+    case 'blur': fxTransform({ s: 1.04, blur: 24 * a * scl }); break;
+    case 'blurIn': fxTransform({ s: 1.04, blur: 24 * a * scl * (1 - ease(p)) }); break;
+    case 'blurOut': fxTransform({ s: 1.04, blur: 24 * a * scl * ease(p) }); break;
     case 'shake': { const f = Math.floor(lt * 30); fxTransform({ s: 1.07, dx: (rnd(f) - .5) * 2 * 40 * a * scl, dy: (rnd(f + 5) - .5) * 2 * 40 * a * scl, rot: (rnd(f + 9) - .5) * .05 * a }); break; }
     case 'flash': { ctx.save(); ctx.globalAlpha = clamp(a * 1.4 * (1 - ease(p)), 0, 1); ctx.fillStyle = fx.flashColor; ctx.fillRect(0, 0, W, H); ctx.restore(); break; }
     case 'strobe': if (Math.floor(lt * 10) % 2 === 0) { ctx.save(); ctx.globalAlpha = .85 * a; ctx.fillStyle = fx.flashColor; ctx.fillRect(0, 0, W, H); ctx.restore(); } break;
@@ -288,7 +329,7 @@ function applyFx(fx, t) {
     }
     case 'bars': { const h = H * .13 * a * ease(Math.min(1, p * 5, (1 - p) * 5 + .0001)); ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, h); ctx.fillRect(0, H - h, W, h); ctx.restore(); break; }
     case 'look': {
-      const sp = colorSpec(fx.color, 0); if (sp.css !== 'none') fxTransform({ filter: sp.css });
+      const sp = colorSpec(fx.color, 0); if (sp.css !== 'none') fxTransform({ spec: sp });
       if (sp.grade) gradePixels(ctx, sp.grade); if (sp.vig > 0) vignette(ctx, sp.vig, 'source-over'); break;
     }
   }
@@ -362,7 +403,7 @@ function drawText(it, t) {
       if (it.loopAnim === 'rainbow') col = `hsl(${(lt * 120 + gi * 25) % 360},100%,60%)`;
       const pop = it.wordFx === 'activePop' && active ? 1.22 : 1;
       ctx.translate(ux + s.dx * px * 1.2, uy + s.dy * px * 1.2); ctx.rotate(s.r * Math.PI / 180); ctx.scale(s.s * s.sx * pop, s.s * pop);
-      ctx.globalAlpha = baseA * s.a; if (s.bl > .1) ctx.filter = `blur(${s.bl * scl}px)`;
+      ctx.globalAlpha = baseA * s.a; if (s.bl > .1 && FILTER_OK) ctx.filter = `blur(${s.bl * scl}px)`;
       if (it.wordFx === 'activeBox' && active) { ctx.fillStyle = it.hlColor; ctx.beginPath(); const bx = -u.w / 2 - px * .12; if (ctx.roundRect) ctx.roundRect(bx, -lineH * .42, u.w + px * .24, lineH * .84, px * .18); else ctx.rect(bx, -lineH * .42, u.w + px * .24, lineH * .84); ctx.fill(); }
       if (it.glowBlur > 0) { ctx.shadowColor = it.glow; ctx.shadowBlur = it.glowBlur * scl * L.glow; }
       else if (it.shadow) { ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = px * .15; ctx.shadowOffsetY = px * .05; }
