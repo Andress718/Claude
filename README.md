@@ -40,3 +40,14 @@ La versión publicada como página en claude.ai no tiene micrófono ni transcrip
 
 Si cambias el editor, ejecuta `./sync-docs.sh` y sube los cambios para actualizar la copia de `docs/`.
 Nota: en cuentas gratuitas GitHub Pages solo funciona con repositorios públicos.
+
+## Plan de edición (cortes, zooms y textos desde un JSON)
+Botón **📋 Plan** de la barra superior. Flujo: transcribe el video → **Copiar transcripción** → pásasela a Claude → pega el plan que te devuelva → **Aplicar plan**. Después cambias tipografías y colores a mano.
+```json
+{ "cuts":[{"from":12.0,"to":14.5}],
+  "zooms":[{"at":3.0,"len":1.2,"type":"punch","amt":60}],
+  "texts":[{"at":1.0,"len":2.5,"text":"TÍTULO","preset":"Pop cómic","y":30}],
+  "subtitles":[{"at":5.0,"len":2.0,"text":"Texto corregido"}], "subtitleStyle":"Hormozi",
+  "replaceSubtitles":false, "cutTransition":{"type":"fade","dur":0.3} }
+```
+Los tiempos son los del video original (en segundos); el editor los traslada solo a la línea de tiempo cortada. Tipos de zoom/efecto: zoomIn, zoomOut, punch, pulse, blur, shake, flash, glitch…

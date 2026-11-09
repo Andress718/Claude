@@ -144,3 +144,6 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   #timeline{grid-template-rows:42px minmax(0,1fr)}
   .bin-item button{padding:8px 10px;font-size:12px}
 }
+.wide-modal{width:min(560px,94vw);text-align:left}
+.wide-modal textarea{font:12px ui-monospace,Menlo,monospace;min-height:180px;resize:vertical;-webkit-user-select:text;user-select:text}
+.wide-modal h3{margin-top:0}
