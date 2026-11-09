@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de Video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Lobster&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">🎬 <b>Editor de Video</b></div>
+  <label class="field-inline">Formato
+    <select id="aspect">
+      <option value="1280x720">16:9 · 1280×720</option>
+      <option value="720x1280">9:16 · 720×1280 (Reels/TikTok)</option>
+      <option value="1080x1080">1:1 · 1080×1080</option>
+      <option value="1080x1350">4:5 · 1080×1350</option>
+    </select>
+  </label>
+  <div class="spacer"></div>
+  <button id="btn-undo" title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+  <button id="btn-import-srt">Importar SRT</button>
+  <button id="btn-export-srt">Exportar SRT</button>
+  <button id="btn-export" class="primary">⬇ Exportar video</button>
+  <input type="file" id="file-media" accept="video/*,image/*" multiple hidden>
+  <input type="file" id="file-srt" accept=".srt,.vtt,text/plain" hidden>
+  <input type="file" id="file-font" accept=".ttf,.otf,.woff,.woff2" hidden>
+</header>
+
+<main id="workspace">
+  <!-- Biblioteca -->
+  <aside id="bin" class="panel">
+    <h3>Medios</h3>
+    <button id="btn-import" class="primary wide">＋ Importar video / imagen</button>
+    <div id="bin-list" class="bin-list"></div>
+    <div id="dropzone">Arrastra aquí tus archivos</div>
+  </aside>
+
+  <!-- Vista previa -->
+  <section id="stage">
+    <div id="canvas-wrap"><canvas id="screen" width="1280" height="720"></canvas></div>
+    <div id="transport">
+      <button id="btn-start" title="Inicio">⏮</button>
+      <button id="btn-play" class="primary" title="Reproducir (Espacio)">▶</button>
+      <span id="timecode">00:00.00 / 00:00.00</span>
+      <div class="spacer"></div>
+      <button id="btn-split" title="Dividir clip en el cursor (S)">✂ Dividir</button>
+      <button id="btn-add-sub" title="Añadir subtítulo en el cursor">💬 Subtítulo</button>
+    </div>
+  </section>
+
+  <!-- Inspector -->
+  <aside id="inspector" class="panel">
+    <nav class="tabs">
+      <button data-tab="subs" class="active">Subtítulos</button>
+      <button data-tab="clip">Clip</button>
+    </nav>
+
+    <!-- Tab subtítulos -->
+    <div class="tab" id="tab-subs">
+      <div class="row">
+        <button id="btn-add-sub2" class="primary">＋ Añadir en el cursor</button>
+        <button id="btn-apply-all" title="Copia el estilo del subtítulo seleccionado a todos">Estilo a todos</button>
+      </div>
+      <div id="sub-list" class="sub-list"></div>
+
+      <div id="sub-editor" hidden>
+        <label>Texto<textarea data-s="text" rows="3"></textarea></label>
+        <div class="grid2">
+          <label>Inicio (s)<input type="number" step="0.1" min="0" data-s="start"></label>
+          <label>Fin (s)<input type="number" step="0.1" min="0" data-s="end"></label>
+        </div>
+
+        <h4>Estilos rápidos</h4>
+        <div class="presets" id="presets"></div>
+
+        <h4>Tipografía</h4>
+        <label>Fuente
+          <select id="font-select" data-s="font"></select>
+        </label>
+        <button id="btn-upload-font" class="wide">Subir mi fuente (.ttf/.otf)…</button>
+        <label>Tamaño <output></output><input type="range" min="16" max="160" data-s="size"></label>
+        <div class="checks">
+          <label><input type="checkbox" data-s="bold"> Negrita</label>
+          <label><input type="checkbox" data-s="italic"> Cursiva</label>
+          <label><input type="checkbox" data-s="upper"> MAYÚSCULAS</label>
+          <label><input type="checkbox" data-s="shadow"> Sombra</label>
+        </div>
+
+        <h4>Colores</h4>
+        <div class="grid2">
+          <label>Texto<input type="color" data-s="color"></label>
+          <label>Resalte (karaoke)<input type="color" data-s="hlColor"></label>
+          <label>Contorno<input type="color" data-s="stroke"></label>
+          <label>Grosor <output></output><input type="range" min="0" max="16" data-s="strokeW"></label>
+          <label>Fondo<input type="color" data-s="bg"></label>
+          <label>Opacidad fondo <output></output><input type="range" min="0" max="100" data-s="bgOpacity"></label>
+        </div>
+
+        <h4>Posición</h4>
+        <div class="grid2">
+          <label>Horizontal % <output></output><input type="range" min="0" max="100" data-s="x"></label>
+          <label>Vertical % <output></output><input type="range" min="0" max="100" data-s="y"></label>
+        </div>
+        <p class="hint">Tip: también puedes arrastrar el texto directamente sobre la vista previa.</p>
+
+        <h4>Animación</h4>
+        <label>Tipo
+          <select data-s="anim">
+            <option value="none">Ninguna</option>
+            <option value="fade">Aparecer (fade)</option>
+            <option value="pop">Pop (rebote de escala)</option>
+            <option value="slideUp">Deslizar hacia arriba</option>
+            <option value="slideDown">Deslizar hacia abajo</option>
+            <option value="slideLeft">Deslizar desde la derecha</option>
+            <option value="typewriter">Máquina de escribir</option>
+            <option value="bounce">Caída con rebote</option>
+            <option value="zoom">Zoom de entrada</option>
+            <option value="karaoke">Karaoke (palabra a palabra)</option>
+          </select>
+        </label>
+        <label>Duración anim. (s) <output></output><input type="range" min="0.1" max="2" step="0.05" data-s="animDur"></label>
+        <label class="check"><input type="checkbox" data-s="animOut"> Animar también la salida</label>
+
+        <button id="btn-del-sub" class="danger wide">Eliminar subtítulo</button>
+      </div>
+    </div>
+
+    <!-- Tab clip -->
+    <div class="tab" id="tab-clip" hidden>
+      <p id="clip-empty" class="hint">Selecciona un clip en la línea de tiempo.</p>
+      <div id="clip-editor" hidden>
+        <h4 id="clip-name"></h4>
+        <div class="grid2">
+          <label>Recorte inicio (s)<input type="number" step="0.1" min="0" data-c="trimIn"></label>
+          <label>Recorte fin (s)<input type="number" step="0.1" min="0" data-c="trimOut"></label>
+        </div>
+        <label>Volumen <output></output><input type="range" min="0" max="1" step="0.05" data-c="volume"></label>
+        <label>Ajuste
+          <select data-c="fit"><option value="cover">Llenar pantalla</option><option value="contain">Ajustar (barras)</option></select>
+        </label>
+
+        <h4>Transición de entrada</h4>
+        <label>Tipo
+          <select data-c="transition.type" id="trans-type">
+            <option value="none">Ninguna (corte)</option>
+            <option value="fade">Fundido cruzado</option>
+            <option value="dip">Fundido a negro</option>
+            <option value="slideL">Deslizar ←</option>
+            <option value="slideR">Deslizar →</option>
+            <option value="slideU">Deslizar ↑</option>
+            <option value="slideD">Deslizar ↓</option>
+            <option value="wipeL">Cortinilla →</option>
+            <option value="wipeR">Cortinilla ←</option>
+            <option value="circle">Círculo</option>
+            <option value="zoom">Zoom</option>
+          </select>
+        </label>
+        <label>Duración (s) <output></output><input type="range" min="0.1" max="3" step="0.1" data-c="transition.dur"></label>
+        <p class="hint" id="trans-hint"></p>
+
+        <h4>Animación del clip</h4>
+        <label>Movimiento
+          <select data-c="anim">
+            <option value="none">Ninguno</option>
+            <option value="zoomIn">Zoom lento (acercar)</option>
+            <option value="zoomOut">Zoom lento (alejar)</option>
+            <option value="panLeft">Paneo ←</option>
+            <option value="panRight">Paneo →</option>
+          </select>
+        </label>
+
+        <h4>Color</h4>
+        <label>Brillo <output></output><input type="range" min="0" max="200" data-c="filter.b"></label>
+        <label>Contraste <output></output><input type="range" min="0" max="200" data-c="filter.c"></label>
+        <label>Saturación <output></output><input type="range" min="0" max="300" data-c="filter.s"></label>
+        <label>Desenfoque <output></output><input type="range" min="0" max="20" step="0.5" data-c="filter.bl"></label>
+        <button id="btn-reset-filter" class="wide">Restablecer color</button>
+
+        <div class="row">
+          <button id="btn-clip-left">◀ Mover</button>
+          <button id="btn-clip-right">Mover ▶</button>
+        </div>
+        <button id="btn-del-clip" class="danger wide">Eliminar clip</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- Línea de tiempo -->
+<section id="timeline">
+  <div id="tl-tools">
+    <span>Zoom</span><input type="range" id="zoom" min="10" max="300" value="80">
+    <span class="hint">Espacio: reproducir · S: dividir · Supr: eliminar · ←/→: ±0.1s · Ctrl+Z: deshacer</span>
+  </div>
+  <div id="tl-body">
+    <div id="tl-labels">
+      <div class="lbl ruler-lbl"></div>
+      <div class="lbl">Video</div>
+      <div class="lbl" id="lbl-subs">Texto</div>
+    </div>
+    <div id="tl-scroll">
+      <div id="tl-inner">
+        <div id="ruler"></div>
+        <div id="track-clips" class="track"></div>
+        <div id="track-subs" class="track"></div>
+        <div id="playhead"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="overlay" hidden>
+  <div class="modal">
+    <h3 id="ov-title">Exportando…</h3>
+    <p>La exportación se graba en tiempo real. Mantén esta pestaña visible.</p>
+    <progress id="ov-progress" value="0" max="1"></progress>
+    <button id="ov-cancel" class="danger">Cancelar</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
