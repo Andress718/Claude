@@ -106,7 +106,7 @@ input[type=color]{width:100%;height:30px;padding:2px;background:var(--bg);border
 #playhead{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #ff4d4f;pointer-events:none;z-index:6}
 #playhead::before{content:"";position:absolute;top:0;left:-7px;border:6px solid transparent;border-top:9px solid #ff4d4f}
 
-#overlay{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:50}
+#overlay,.ovl{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:50}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;width:380px;text-align:center}
 .modal progress{width:100%;height:14px;margin:8px 0 14px}
 [hidden]{display:none!important}

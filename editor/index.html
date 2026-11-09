@@ -67,6 +67,15 @@
   </div>
 </section>
 
+<div id="tr-overlay" class="ovl" hidden>
+  <div class="modal">
+    <h3>🎙 Transcribiendo audio</h3>
+    <p id="tr-msg">Preparando…</p>
+    <progress id="tr-progress" max="1"></progress>
+    <button id="tr-cancel" class="danger">Cancelar</button>
+  </div>
+</div>
+
 <div id="overlay" hidden>
   <div class="modal">
     <h3 id="ov-title">Exportando MP4…</h3>
@@ -80,6 +89,7 @@
 <script src="js/render.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/transcribe.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

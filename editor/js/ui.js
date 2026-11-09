@@ -73,7 +73,16 @@ function buildLibrary() {
       el('button', { class: 'wide', textContent: '＋ Importar audio', on: { click: () => $('#file-media').click() } }), el('div', { id: 'audio-list' }));
     updateRecUI(); renderBin();
   } else if (libTab === 'text') {
-    b.append(el('div', { class: 'sec-title', textContent: 'Títulos animados (estilo CapCut)' }),
+    const opt = (list, cur, on) => { const sl = el('select', { on: { change: e => on(e.target.value) } }); list.forEach(([v, n]) => sl.append(el('option', { value: v, textContent: n, selected: String(v) === String(cur) }))); return sl; };
+    const nT = transcribeTargets().length;
+    b.append(el('div', { class: 'sec-title', textContent: 'Transcripción automática (voz → subtítulos)' }),
+      el('p', { class: 'hint', textContent: 'Usa Whisper en tu navegador. La primera vez descarga el modelo (requiere internet). Si seleccionas un clip, transcribe solo ese; si no, todos los clips con audio.' }),
+      el('label', {}, 'Idioma', opt(TR_LANGS, TRC.lang, v => TRC.lang = v)), el('label', {}, 'Modelo', opt(TR_MODELS, TRC.model, v => TRC.model = v)),
+      el('label', {}, 'Estilo de los subtítulos', opt(SUB_PRESETS.map((p, i) => [i, p.n]), TRC.preset, v => TRC.preset = +v)),
+      el('label', {}, 'Palabras por subtítulo: ', el('output', { textContent: TRC.words }), el('input', { type: 'range', min: 2, max: 12, value: TRC.words, on: { input: e => { TRC.words = +e.target.value; e.target.previousSibling.textContent = TRC.words; } } })),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', checked: TRC.replace, on: { change: e => TRC.replace = e.target.checked } }), 'Reemplazar subtítulos existentes del tramo'),
+      el('button', { class: 'primary wide', textContent: '🎙 Transcribir → subtítulos' + (nT ? ` (${nT} clip${nT > 1 ? 's' : ''})` : ''), on: { click: () => startTranscribe() } }),
+      el('div', { class: 'sec-title', textContent: 'Títulos animados (estilo CapCut)' }),
       el('div', { class: 'grid g2' }, TEXT_PRESETS.map(p => gridBtn(p.n, () => usePreset(p, 'title'), previewStyle(p.s)))),
       el('p', { class: 'hint', textContent: 'Si hay un texto seleccionado, el estilo se aplica a ese texto. Luego puedes cambiar colores y tipografía en el panel derecho.' }),
       el('div', { class: 'sec-title', textContent: 'Subtítulos' }),
@@ -162,7 +171,7 @@ function schema(it) {
         SEL('mask.anim', 'Animación de máscara', [['none', 'Ninguna'], ['grow', 'Crecer al entrar'], ['pulse', 'Latido'], ['spin', 'Girar']]), R('mask.animDur', 'Duración animación', .1, 3, .1)] : [])] },
       { t: 'Croma (quitar color de fondo)', f: [CHK('chroma.on', 'Activar croma', true), ...(it.chroma.on ? [C('chroma.color', 'Color a eliminar'), R('chroma.tol', 'Tolerancia', 0, 100), R('chroma.soft', 'Suavizado', 0, 50)] : [])], closed: !it.chroma.on },
       { t: 'Filtro y corrección de color', f: colorFields('color') },
-      ...(vid ? [{ t: 'Audio del clip', f: [R('volume', 'Volumen %', 0, 200), R('fadeIn', 'Fundido de entrada (s)', 0, 5, .1), R('fadeOut', 'Fundido de salida (s)', 0, 5, .1), CHK('muted', 'Silenciar'), BTN('⇪ Extraer audio a una pista', () => extractAudio(it.id))] }] : []),
+      ...(vid ? [{ t: 'Audio del clip', f: [R('volume', 'Volumen %', 0, 200), R('fadeIn', 'Fundido de entrada (s)', 0, 5, .1), R('fadeOut', 'Fundido de salida (s)', 0, 5, .1), CHK('muted', 'Silenciar'), BTN('⇪ Extraer audio a una pista', () => extractAudio(it.id)), BTN('🎙 Generar subtítulos', () => startTranscribe(it))] }] : []),
       { t: 'Acciones', f: commonActs(it, main ? [BTN('◀ Mover', () => moveMain(it.id, -1)), BTN('Mover ▶', () => moveMain(it.id, 1))] : []) },
     ];
   }
@@ -196,7 +205,7 @@ function schema(it) {
   if (it.type === 'audio') return [
     { t: 'Audio', f: [R('volume', 'Volumen %', 0, 200), R('fadeIn', 'Fundido de entrada (s)', 0, 10, .1), R('fadeOut', 'Fundido de salida (s)', 0, 10, .1), CHK('muted', 'Silenciar')] },
     { t: 'Tiempo', f: [N('start', 'Inicio (s)'), N('trimIn', 'Recorte inicio (s)'), N('trimOut', 'Recorte fin (s)')] },
-    { t: 'Acciones', f: commonActs(it) },
+    { t: 'Acciones', f: commonActs(it, [BTN('🎙 Generar subtítulos', () => startTranscribe(it))]) },
   ];
   return [];
 }

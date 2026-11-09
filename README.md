@@ -19,6 +19,8 @@ Editor gráfico multipista que corre 100 % en el navegador. Sin instalar nada.
 
 **Texto y subtítulos** estilo CapCut: 12 títulos animados y 12 estilos de subtítulos (Hormozi, karaoke, pop por palabra, caja resaltada, máquina de escribir…). Todo editable: tipografía (o sube la tuya), colores, contorno, fondo, resplandor, animación por texto/palabra/letra. Importar/exportar `.srt`.
 
+**Transcripción automática (voz → subtítulos)**: Whisper corre en tu navegador (idiomas: español, inglés, portugués, francés, alemán, italiano, catalán o detección automática; modelos tiny/base/small). Genera subtítulos con tiempos, divididos en frases cortas y con el estilo CapCut que elijas. La primera vez necesita internet para descargar el motor y el modelo; después queda en caché.
+
 **Formatos**: 16:9, 9:16, 1:1, 4:5, 2:3, 3:4, 4:3, 21:9 a 480p/720p/1080p.
 
 **Exportación a MP4** (H.264) grabando en tiempo real, con el audio mezclado.
