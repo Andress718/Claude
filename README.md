@@ -31,3 +31,12 @@ Espacio reproducir · S dividir · Supr eliminar · Ctrl+D duplicar · Ctrl+Z / 
 ## iPad
 Funciona con pantalla táctil: arrastra elementos, pellizca para escalar, paneles ☰ Biblioteca y ⚙ Ajustes. En Safari (que no soporta `ctx.filter`) los filtros se emulan por píxeles.
 La versión publicada como página en claude.ai no tiene micrófono ni transcripción (el visor los bloquea); para eso aloja la carpeta `editor/` en tu propio servidor con https (p. ej. GitHub Pages).
+
+## Publicar con GitHub Pages (https, para voz en off y transcripción)
+1. En GitHub abre el repositorio → **Settings** → **Pages**.
+2. En *Build and deployment* elige **Source: Deploy from a branch**.
+3. **Branch:** `claude/gallant-mccarthy-zcbbaa` · **Folder:** `/docs` → **Save**.
+4. Espera 1-2 minutos y abre `https://andress718.github.io/claude/` (también en Safari del iPad; usa «Añadir a pantalla de inicio»).
+
+Si cambias el editor, ejecuta `./sync-docs.sh` y sube los cambios para actualizar la copia de `docs/`.
+Nota: en cuentas gratuitas GitHub Pages solo funciona con repositorios públicos.
